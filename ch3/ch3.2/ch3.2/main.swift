@@ -1,26 +1,25 @@
+//
+//  main.swift
+//  ch3.2
+//
+//  Created by Sebastian Juarez on 1/28/25.
+//
+
 import MetalKit
 
-// Define the matrix dimensions
+// Define matrix dimensions
 let width = 6
-let height = 4
+let height = 6
 let matrixSize = width * height
 
-// Initialize the matrix with values 1 to width*height
+// Initialize the matrix with values 1 to 36
 var matrix: [Int] = Array(1...matrixSize)
-
-// Print the result
-print("Original Matrix:")
-for row in 0..<height {
-    let startIndex = row * width
-    let endIndex = startIndex + width
-    print(matrix[startIndex..<endIndex].map { String($0) }.joined(separator: " "))
-}
 
 // Setup Metal
 guard let device = MTLCreateSystemDefaultDevice(),
       let commandQueue = device.makeCommandQueue(),
       let library = device.makeDefaultLibrary(),
-      let kernelFunction = library.makeFunction(name: "squareMatrix"),
+      let kernelFunction = library.makeFunction(name: "scaleMatrix"),
       let computePipeline = try? device.makeComputePipelineState(function: kernelFunction) else {
     fatalError("Metal setup failed")
 }
@@ -36,11 +35,10 @@ let heightBufferPointer = device.makeBuffer(bytes: &heightBuffer, length: Memory
 guard let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
     fatalError("Command buffer setup failed")
-    
 }
 
-// Configure thread execution
-let threadsPerThreadgroup = MTLSize(width: 2, height: 2, depth: 1) // 2x2 threads per threadgroup
+// Configure 2D thread execution
+let threadsPerThreadgroup = MTLSize(width: 2, height: 2, depth: 1) // 2x2 threads per block
 let threadgroupsPerGrid = MTLSize(
     width: (width + threadsPerThreadgroup.width - 1) / threadsPerThreadgroup.width,
     height: (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height,
@@ -66,7 +64,7 @@ let resultPointer = matrixBuffer.contents().bindMemory(to: Int.self, capacity: m
 let resultMatrix = Array(UnsafeBufferPointer(start: resultPointer, count: matrixSize))
 
 // Print the result
-print("Squared Matrix:")
+print("Scaled Matrix:")
 for row in 0..<height {
     let startIndex = row * width
     let endIndex = startIndex + width
